@@ -1,3 +1,6 @@
+using UIQ_CronTab.Services;
+using UIQ_CronTab.Services.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,7 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IDataBaseService, MySqlDataBaseNcsUiService>();
+builder.Services.AddScoped<IDataBaseService, MySqlDataBaseNcsLogService>();
+builder.Services.AddScoped<IParseLogService, ParseLogService>();
+builder.Services.AddScoped<ISshCommandService, SshCommandService>();
+builder.Services.AddScoped<ILogFileService, LogFileService>();
 
 var app = builder.Build();
 
