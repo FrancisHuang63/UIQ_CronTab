@@ -1,4 +1,4 @@
-﻿namespace UIQ_CronTab.Extensioins
+﻿namespace UIQ_CronTab
 {
     public static class DateTimeExtension
     {
