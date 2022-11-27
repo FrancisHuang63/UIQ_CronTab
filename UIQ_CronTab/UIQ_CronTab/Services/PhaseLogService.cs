@@ -9,11 +9,8 @@ namespace UIQ_CronTab.Services
     {
         private readonly ISshCommandService _sshCommandService;
         private readonly IDataBaseService _dataBaseNcsUiService;
-        private readonly IDataBaseService _dataBaseNcsLogService;
         private readonly ILogFileService _logFileService;
 
-        private readonly string _systemName;
-        private readonly string _shellPath;
         private readonly string _uiPath;
 
         public PhaseLogService(ISshCommandService sshCommandService, IEnumerable<IDataBaseService> dataBaseServices
@@ -21,11 +18,8 @@ namespace UIQ_CronTab.Services
         {
             _sshCommandService = sshCommandService;
             _dataBaseNcsUiService = dataBaseServices.Single(x => x.DataBase == Enums.DataBaseEnum.NcsUi);
-            _dataBaseNcsLogService = dataBaseServices.Single(x => x.DataBase == Enums.DataBaseEnum.NcsLog);
             _logFileService = logFileService;
 
-            _systemName = configuration.GetValue<string>("SystemName");
-            _shellPath = configuration.GetValue<string>("ShellPath");
             _uiPath = configuration.GetValue<string>("UiPath");
         }
 
