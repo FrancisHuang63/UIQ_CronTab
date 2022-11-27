@@ -17,7 +17,7 @@ namespace UIQ_CronTab.Controllers
         [HttpPost]
         public async Task Post()
         {
-            await _parseLogService.ParseLog();
+            await _parseLogService.ParseLogAsync();
         }
     }
 }

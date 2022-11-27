@@ -2,6 +2,6 @@
 {
     public interface IParseLogService
     {
-        public Task ParseLog();
+        public Task ParseLogAsync();
     }
 }

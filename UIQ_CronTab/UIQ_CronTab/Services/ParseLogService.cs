@@ -28,14 +28,14 @@ namespace UIQ_CronTab.Services
             _uiPath = configuration.GetValue<string>("UiPath");
         }
 
-        public async Task ParseLog()
+        public async Task ParseLogAsync()
         {
             var allAccPath = await _sshCommandService.RunCommandAsync($"sh {_uiPath}shell/log_path.sh");
             await _sshCommandService.RunCommandAsync($"{_shellPath}log_collector.ksh " + allAccPath);
             var allMemberInfoDatas = await _sshCommandService.RunCommandAsync($"{_shellPath}get_all_member_info.ksh {allAccPath}");
             var allMemberInfo = ParseString(allMemberInfoDatas, true);
-            var model_cfg = await GetModelConfig();
-            var batchConfig = await GetBatchConfig();
+            var model_cfg = await GetModelConfigAsync();
+            var batchConfig = await GetBatchConfigAsync();
             var logPath = $"{_uiPath}log";
 
             var monitoringInfos = new List<MonitoringInfo>();
@@ -57,13 +57,15 @@ namespace UIQ_CronTab.Services
                 }
 
                 GenerateMonitoringInfo(monitoringInfo, info, allMemberInfo);
-                await SetMonitoringInfo(monitoringInfo, info, batchConfig, logFilePath);
+                await SetMonitoringInfoAsync(monitoringInfo, info, batchConfig, logFilePath);
 
                 monitoringInfos.Add(monitoringInfo);
             }
 
             UpdateMonitoringInfo(monitoringInfos);
         }
+
+        #region Private Method
 
         private void UpdateMonitoringInfo(IEnumerable<MonitoringInfo> monitoringInfo)
         {
@@ -102,7 +104,7 @@ namespace UIQ_CronTab.Services
             monitoringInfo.Error_Message = string.Empty;
         }
 
-        private async Task SetMonitoringInfo(MonitoringInfo monitoringInfo, ModelMember info, IEnumerable<BatchConfig> batchConfig, string logFilePath)
+        private async Task SetMonitoringInfoAsync(MonitoringInfo monitoringInfo, ModelMember info, IEnumerable<BatchConfig> batchConfig, string logFilePath)
         {
             var replace_str = new List<string>() { "\r", "\n", "\r\n", " ", "\n\r", "]", "[", ".sms", "none", ".ksh" };
             var logDatas = await _logFileService.ReadLogFileAsync(logFilePath);
@@ -163,11 +165,11 @@ namespace UIQ_CronTab.Services
                     //predict batch start and end time
                     var start = monitoringInfo.Start_Time;
                     var sms_start_time = monitoringInfo.Sms_Time; //工作包起始時間
-                    var min0 = await GetPartTime(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Sms_Name, monitoringInfo.Run_Type, monitoringInfo.Dtg, batchConfig); //工作包預測起始時間(前面工作時間)
-                    var min1 = await GetBatchInfoByName(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Sms_Name, monitoringInfo.Run_Type, monitoringInfo.Dtg, nameof(BatchConfig.Time)); //工作包時間長度
+                    var min0 = await GetPartTimeAsync(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Sms_Name, monitoringInfo.Run_Type, monitoringInfo.Dtg, batchConfig); //工作包預測起始時間(前面工作時間)
+                    var min1 = await GetBatchInfoByNameAsync(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Sms_Name, monitoringInfo.Run_Type, monitoringInfo.Dtg, nameof(BatchConfig.Time)); //工作包時間長度
 
                     //min2模組全部執行完成所需時間
-                    var min2 = await GetTotalTime(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Run_Type, monitoringInfo.Dtg, batchConfig);
+                    var min2 = await GetTotalTimeAsync(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Run_Type, monitoringInfo.Dtg, batchConfig);
                     monitoringInfo.Pre_Start = start.Value.AddMinutes(min0);  //工作包預測起始時間(實際時間+前面工作時間)
                     monitoringInfo.Pre_End = sms_start_time.Value.AddMinutes(min1); //預測工作包結束時間(實際起始+工作長度)
                     monitoringInfo.End_Time = start.Value.AddMinutes(min2); //預測模組全部執行完成時間(實際起始+所有工作長度)
@@ -211,7 +213,7 @@ namespace UIQ_CronTab.Services
                         var start = monitoringInfo.Start_Time;
 
                         //min2模組全部執行完成所需時間
-                        var min2 = await GetTotalTime(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Run_Type, monitoringInfo.Dtg, batchConfig);
+                        var min2 = await GetTotalTimeAsync(info.Model_Name, info.Member_Name, info.Nickname, monitoringInfo.Run_Type, monitoringInfo.Dtg, batchConfig);
                         monitoringInfo.End_Time = start.Value.AddMinutes(min2); //預測模組全部執行完成時間
                         monitoringInfo.Start_Flag = 0; //start_time已抓取完成
                     }
@@ -272,7 +274,7 @@ namespace UIQ_CronTab.Services
         /// <param name="batchConfig"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        private async Task<int> GetTotalTime(string model_Name, string member_Name, string nickname, string run_type, string dtg, IEnumerable<BatchConfig> batchConfig)
+        private async Task<int> GetTotalTimeAsync(string model_Name, string member_Name, string nickname, string run_type, string dtg, IEnumerable<BatchConfig> batchConfig)
         {
             var count = 0;     //計算總時間
 
@@ -294,7 +296,7 @@ namespace UIQ_CronTab.Services
                 }
 
                 //表示batch同層有重複
-                count += await GetBatchInfoByPosition(model_Name, member_Name, nickname, position, run_type, dtg, nameof(BatchConfig.Time));
+                count += await GetBatchInfoByPositionAsync(model_Name, member_Name, nickname, position, run_type, dtg, nameof(BatchConfig.Time));
                 i += number - 1;  //position由sql指令排序過
             }
             return count;
@@ -311,11 +313,11 @@ namespace UIQ_CronTab.Services
         /// <param name="dtg"></param>
         /// <param name="batchConfig"></param>
         /// <returns></returns>
-        private async Task<int> GetPartTime(string modelName, string memberName, string nickname, string smsName, string runType, string dtg, IEnumerable<BatchConfig> batchConfig)
+        private async Task<int> GetPartTimeAsync(string modelName, string memberName, string nickname, string smsName, string runType, string dtg, IEnumerable<BatchConfig> batchConfig)
         {
             var key = modelName + memberName + nickname;
             var count = 0;     //計算總時間
-            var tmpPosition = await GetBatchInfoByName(modelName, memberName, nickname, smsName, runType, dtg, nameof(BatchConfig.Position)); //取出工作包的次序
+            var tmpPosition = await GetBatchInfoByNameAsync(modelName, memberName, nickname, smsName, runType, dtg, nameof(BatchConfig.Position)); //取出工作包的次序
 
             if (tmpPosition > 0)
             {  //工作包次序 > 0 表示有前面的工作
@@ -332,7 +334,7 @@ namespace UIQ_CronTab.Services
                         continue;
                     }
 
-                    count += await GetBatchInfoByPosition(modelName, memberName, nickname, position, runType, dtg, nameof(BatchConfig.Time));
+                    count += await GetBatchInfoByPositionAsync(modelName, memberName, nickname, position, runType, dtg, nameof(BatchConfig.Time));
                     i += number - 1;  //position由sql指令排序過
                 }
             }
@@ -352,14 +354,14 @@ namespace UIQ_CronTab.Services
         /// <param name="getColumnName"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        private async Task<int> GetBatchInfoByPosition(string modelName, string memberName, string nickname, int position, string runType, string dtg, string getColumnName)
+        private async Task<int> GetBatchInfoByPositionAsync(string modelName, string memberName, string nickname, int position, string runType, string dtg, string getColumnName)
         {
-            var batchItems = await GetBatchByPosition(modelName, memberName, nickname, position, runType);
+            var batchItems = await GetBatchByPositionAsync(modelName, memberName, nickname, position, runType);
             var firstBatchItem = batchItems.FirstOrDefault();
 
             if (batchItems.Count() == 0)  // 若 同步驟 同執行型態無
             {
-                batchItems = await GetBatchByPosition(modelName, memberName, nickname, position, string.Empty);
+                batchItems = await GetBatchByPositionAsync(modelName, memberName, nickname, position, string.Empty);
                 firstBatchItem = batchItems.FirstOrDefault();
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
             }
@@ -369,17 +371,17 @@ namespace UIQ_CronTab.Services
 
             //若 同步驟 同執行型態有兩個以上
             dtg = dtg.Length >= 8 ? dtg.Substring(6, 2) : string.Empty;
-            batchItems = await GetBatchByPosition(modelName, memberName, nickname, position, runType, dtg);
+            batchItems = await GetBatchByPositionAsync(modelName, memberName, nickname, position, runType, dtg);
             firstBatchItem = batchItems.FirstOrDefault();
             if (batchItems.Count() >= 1)  // 若 同步驟 同執行型態 同dtg值僅有一個以上(取第一個)
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
 
-            batchItems = await GetBatchByPosition(modelName, memberName, nickname, position, runType, string.Empty);
+            batchItems = await GetBatchByPositionAsync(modelName, memberName, nickname, position, runType, string.Empty);
             firstBatchItem = batchItems.FirstOrDefault();
             if (batchItems.Count() >= 1)
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
 
-            batchItems = await GetBatchByPosition(modelName, memberName, nickname, position, string.Empty);
+            batchItems = await GetBatchByPositionAsync(modelName, memberName, nickname, position, string.Empty);
             firstBatchItem = batchItems.FirstOrDefault();
             return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
         }
@@ -395,9 +397,9 @@ namespace UIQ_CronTab.Services
         /// <param name="dtg"></param>
         /// <param name="getColumnName"></param>
         /// <returns></returns>
-        private async Task<int> GetBatchInfoByName(string modelName, string memberName, string nickname, string smsName, string runType, string dtg, string getColumnName)
+        private async Task<int> GetBatchInfoByNameAsync(string modelName, string memberName, string nickname, string smsName, string runType, string dtg, string getColumnName)
         {
-            var batchItems = await GetBatchByName(modelName, memberName, nickname, smsName); //先查詢batch名稱
+            var batchItems = await GetBatchByNameAsync(modelName, memberName, nickname, smsName); //先查詢batch名稱
             if (batchItems.Count() == 0) return -1;
 
             var firstBatchItem = batchItems.FirstOrDefault();
@@ -405,11 +407,11 @@ namespace UIQ_CronTab.Services
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
 
             //若同名稱有兩個以上
-            batchItems = await GetBatchByName(modelName, memberName, nickname, smsName, runType);
+            batchItems = await GetBatchByNameAsync(modelName, memberName, nickname, smsName, runType);
             firstBatchItem = batchItems.FirstOrDefault();
             if (batchItems.Count() == 0)
             {
-                batchItems = await GetBatchByName(modelName, memberName, nickname, smsName, string.Empty);
+                batchItems = await GetBatchByNameAsync(modelName, memberName, nickname, smsName, string.Empty);
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
             }
 
@@ -418,22 +420,22 @@ namespace UIQ_CronTab.Services
 
             //若同名稱、同型態有兩個以上
             dtg = dtg.Length >= 8 ? dtg.Substring(6, 2) : string.Empty;
-            batchItems = await GetBatchByName(modelName, memberName, nickname, smsName, runType, dtg);
+            batchItems = await GetBatchByNameAsync(modelName, memberName, nickname, smsName, runType, dtg);
             firstBatchItem = batchItems.FirstOrDefault();
             if (batchItems.Count() >= 1)  //若同名稱、同型態、同dtg值有一個以上
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
 
-            batchItems = await GetBatchByName(modelName, memberName, nickname, smsName, runType, string.Empty);
+            batchItems = await GetBatchByNameAsync(modelName, memberName, nickname, smsName, runType, string.Empty);
             firstBatchItem = batchItems.FirstOrDefault();
             if (batchItems.Count() >= 1)
                 return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
 
-            batchItems = await GetBatchByName(modelName, memberName, nickname, smsName, string.Empty);
+            batchItems = await GetBatchByNameAsync(modelName, memberName, nickname, smsName, string.Empty);
             firstBatchItem = batchItems.FirstOrDefault();
             return (int)firstBatchItem.GetType().GetProperties().FirstOrDefault(x => x.Name == getColumnName).GetValue(firstBatchItem);
         }
 
-        private async Task<IEnumerable<BatchView>> GetBatchByName(string modelName, string memberName, string nickname, string smsName, string runType = null, string dtg = null)
+        private async Task<IEnumerable<BatchView>> GetBatchByNameAsync(string modelName, string memberName, string nickname, string smsName, string runType = null, string dtg = null)
         {
             var sql = $@"SELECT * FROM batch_view
                          WHERE model = @Model
@@ -456,7 +458,7 @@ namespace UIQ_CronTab.Services
             return await _dataBaseNcsUiService.QueryAsync<BatchView>(sql, param);
         }
 
-        private async Task<IEnumerable<BatchView>> GetBatchByPosition(string modelName, string memberName, string nickname, int position, string runType, string dtg = null)
+        private async Task<IEnumerable<BatchView>> GetBatchByPositionAsync(string modelName, string memberName, string nickname, int position, string runType, string dtg = null)
         {
             var sql = $@"SELECT * FROM batch_view
                          WHERE model = @Model
@@ -477,7 +479,7 @@ namespace UIQ_CronTab.Services
             return await _dataBaseNcsUiService.QueryAsync<BatchView>(sql, param);
         }
 
-        private async Task<IEnumerable<BatchConfig>> GetBatchConfig()
+        private async Task<IEnumerable<BatchConfig>> GetBatchConfigAsync()
         {
             var sql = @"SELECT concat(`model`.`model_name`,`member`.`member_name`,`member`.`nickname`) AS model_member_nick,
                             `batch`.`batch_name` AS `batch`,
@@ -499,7 +501,7 @@ namespace UIQ_CronTab.Services
             return result;
         }
 
-        private async Task<IEnumerable<ModelMember>> GetModelConfig()
+        private async Task<IEnumerable<ModelMember>> GetModelConfigAsync()
         {
             var sql = @"SELECT *
                         FROM(`member`, `model`)
@@ -540,5 +542,7 @@ namespace UIQ_CronTab.Services
             }
             return result;
         }
+
+        #endregion Private Method
     }
 }

@@ -23,6 +23,7 @@ builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddScoped<IDataBaseService, MySqlDataBaseNcsUiService>();
 builder.Services.AddScoped<IDataBaseService, MySqlDataBaseNcsLogService>();
 builder.Services.AddScoped<IParseLogService, ParseLogService>();
+builder.Services.AddScoped<IPhaseLogService, PhaseLogService>();
 builder.Services.AddScoped<ISshCommandService, SshCommandService>();
 builder.Services.AddScoped<ILogFileService, LogFileService>();
 builder.Services.Configure<ConnectoinStringOption>(builder.Configuration.GetSection("MySqlOptions").GetSection("ConnectionString"));
